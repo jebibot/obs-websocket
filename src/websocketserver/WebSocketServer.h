@@ -97,5 +97,5 @@ private:
 	std::mutex _sessionMutex;
 	std::map<websocketpp::connection_hdl, SessionPtr, std::owner_less<websocketpp::connection_hdl>> _sessions;
 
-	std::atomic<bool> _obsReady = false;
+	std::atomic<bool> _obsReady = true;
 };
