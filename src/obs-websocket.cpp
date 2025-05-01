@@ -21,6 +21,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <QMainWindow>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
+#include <obs-hotkey.h>
 
 #include "obs-websocket.h"
 #include "Config.h"
@@ -47,6 +48,7 @@ EventHandlerPtr _eventHandler;
 WebSocketApiPtr _webSocketApi;
 WebSocketServerPtr _webSocketServer;
 SettingsDialog *_settingsDialog = nullptr;
+obs_hotkey_id _settingHotkey;
 
 void WebSocketApiEventCallback(std::string vendorName, std::string eventType, obs_data_t *obsEventData);
 
@@ -80,10 +82,14 @@ bool obs_module_load(void)
 	_settingsDialog = new SettingsDialog(mainWindow);
 	obs_frontend_pop_ui_translation();
 
-	// Add the settings dialog to the tools menu
 	const char *menuActionText = obs_module_text("OBSWebSocket.Settings.DialogTitle");
-	QAction *menuAction = (QAction *)obs_frontend_add_tools_menu_qaction(menuActionText);
-	QObject::connect(menuAction, &QAction::triggered, [] { _settingsDialog->ToggleShowHide(); });
+	_settingHotkey = obs_hotkey_register_frontend(
+		"OBSWebSocket.Settings", menuActionText,
+		[](void *, obs_hotkey_id, obs_hotkey_t *, bool pressed) {
+			if (pressed)
+				_settingsDialog->ToggleShowHide();
+		},
+		obs_current_module());
 
 	blog(LOG_INFO, "[obs_module_load] Module loaded.");
 	return true;
@@ -109,6 +115,8 @@ void obs_module_post_load(void)
 void obs_module_unload(void)
 {
 	blog(LOG_INFO, "[obs_module_unload] Shutting down...");
+
+	obs_hotkey_unregister(_settingHotkey);
 
 	// Shutdown the WebSocket server if it is running
 	if (_webSocketServer->IsListening()) {
